@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-saffron: #FF6B35;
+  --color-navy: #0A1128;
+  --color-cream: #FFF8F3;
+  --color-emerald: #10B981;
+  --color-rose: #F87171;
+  --color-gold: #F59E0B;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-navy);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
