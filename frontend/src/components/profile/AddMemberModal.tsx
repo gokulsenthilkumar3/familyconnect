@@ -4,6 +4,8 @@ import { MemberForm } from './MemberForm';
 import { useFamilyStore } from '../../store/familyStore';
 import { useUIStore } from '../../store/uiStore';
 import type { Member } from '../../types/family';
+import apiClient from '../../api/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -13,33 +15,45 @@ interface AddMemberModalProps {
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose }) => {
   const { addMember, activeTree } = useFamilyStore();
   const { addToast } = useUIStore();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = (data: any) => {
-    // Convert form data to Member object
-    const newMember: Member = {
-      id: `mem-${Date.now()}`,
-      treeId: activeTree?.id || 'tree-1',
-      name: data.name,
-      gender: data.gender,
-      birthDate: data.birthDate,
-      birthLocation: data.birthLocation,
-      isAlive: data.isAlive,
-      deathDate: data.deathDate,
-      bio: data.bio,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  const handleSubmit = async (data: any) => {
+    try {
+      const payload = {
+        treeId: activeTree?.id,
+        name: data.name,
+        gender: data.gender,
+        birthDate: data.birthDate,
+        birthLocation: data.birthLocation,
+        deathDate: data.deathDate,
+        bio: data.bio,
+      };
 
-    addMember(newMember);
-    
-    // Note: If relationshipToRoot is selected, we would also create a Relationship entry here
-    
-    addToast({
-      type: 'success',
-      message: `${data.name} was added to the family tree.`
-    });
-    
-    onClose();
+      const response = await apiClient.post('/members', payload);
+      
+      // Optimistically update the store
+      addMember(response.data);
+      
+      // Tell React Query to refetch the tree data in the background
+      if (activeTree?.id) {
+        queryClient.invalidateQueries({ queryKey: ['tree', activeTree.id] });
+      }
+
+      // Note: If relationshipToRoot is selected, we would also create a Relationship entry here
+      
+      addToast({
+        type: 'success',
+        message: `${data.name} was added to the family tree.`
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Failed to add member:', error);
+      addToast({
+        type: 'error',
+        message: `Failed to add ${data.name}. Please try again.`
+      });
+    }
   };
 
   return (

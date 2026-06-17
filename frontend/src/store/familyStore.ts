@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { Member, Relationship, FamilyTree } from '../types/family';
-import { MOCK_TREE, MOCK_MEMBERS, MOCK_RELATIONSHIPS } from '../data/mockData';
 
 interface FamilyState {
   activeTree: FamilyTree | null;
@@ -17,9 +16,9 @@ interface FamilyState {
 }
 
 export const useFamilyStore = create<FamilyState>((set) => ({
-  activeTree: MOCK_TREE,
-  members: MOCK_MEMBERS,
-  relationships: MOCK_RELATIONSHIPS,
+  activeTree: null,
+  members: [],
+  relationships: [],
 
   setTree: (tree) => set({ activeTree: tree }),
   
