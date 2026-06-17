@@ -2,22 +2,48 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { useAuthStore } from '../store/authStore';
+import apiClient from '../api/client';
+import { useUIStore } from '../store/uiStore';
 
 export const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore(state => state.login);
+  const addToast = useUIStore(state => state.addToast);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock authentication
-    login({
-      id: 'user-1',
-      email: 'test@familyconnect.com',
-      name: 'Demo User',
-      createdAt: new Date().toISOString()
-    });
-    navigate('/dashboard');
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const name = formData.get('name') as string;
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const response = await apiClient.post('/auth/login', { email, password });
+        login(response.data.user, response.data.token);
+      } else {
+        const response = await apiClient.post('/auth/register', { email, password, name });
+        login(response.data.user, response.data.token);
+      }
+      
+      addToast({
+        title: 'Success',
+        message: 'Successfully authenticated',
+        type: 'success'
+      });
+      navigate('/dashboard');
+    } catch (error: any) {
+      addToast({
+        title: 'Authentication Failed',
+        message: error.response?.data?.error || 'An error occurred during authentication',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,6 +71,7 @@ export const AuthPage: React.FC = () => {
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
               <input 
                 id="name" 
+                name="name"
                 type="text" 
                 required 
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-[var(--color-saffron)] focus:border-[var(--color-saffron)]"
@@ -56,10 +83,10 @@ export const AuthPage: React.FC = () => {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
             <input 
               id="email" 
+              name="email"
               type="email" 
               required 
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-[var(--color-saffron)] focus:border-[var(--color-saffron)]"
-              defaultValue="demo@example.com"
             />
           </div>
 
@@ -67,22 +94,16 @@ export const AuthPage: React.FC = () => {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
             <input 
               id="password" 
+              name="password"
               type="password" 
               required 
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-[var(--color-saffron)] focus:border-[var(--color-saffron)]"
-              defaultValue="password123"
             />
           </div>
 
-          <Button type="submit" variant="primary" className="w-full">
-            {isLogin ? 'Sign In' : 'Create Account'}
+          <Button type="submit" variant="primary" className="w-full" disabled={loading}>
+            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
           </Button>
-          
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
-              For this demo, just click the button above to enter the app.
-            </p>
-          </div>
         </form>
       </div>
     </div>

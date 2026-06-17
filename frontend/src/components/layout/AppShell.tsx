@@ -1,12 +1,15 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { useFamilyData } from '../../hooks/useFamilyData';
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
+  useFamilyData();
+
   return (
     <div className="flex h-screen bg-[var(--color-cream)] overflow-hidden font-sans">
       <Sidebar />

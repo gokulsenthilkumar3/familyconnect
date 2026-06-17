@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppShell } from './components/layout/AppShell';
 import { TreeCanvasPage } from './pages/TreeCanvasPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -10,14 +11,16 @@ import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // We're bypassing actual auth logic for the demo unless you want to enforce it.
   return <AppShell>{children}</AppShell>;
 };
 
-function App() {
+const queryClient = new QueryClient();
+
+export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         
@@ -27,9 +30,8 @@ function App() {
         <Route path="/members" element={<ProtectedRoute><MembersPage /></ProtectedRoute>} />
         <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
-
-export default App;
