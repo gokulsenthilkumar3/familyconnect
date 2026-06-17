@@ -3,7 +3,6 @@ import { Modal } from '../common/Modal';
 import { MemberForm } from './MemberForm';
 import { useFamilyStore } from '../../store/familyStore';
 import { useUIStore } from '../../store/uiStore';
-import type { Member } from '../../types/family';
 import apiClient from '../../api/client';
 import { useQueryClient } from '@tanstack/react-query';
 

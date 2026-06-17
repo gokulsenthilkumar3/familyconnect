@@ -84,3 +84,20 @@ export const getMembers = async (req: AuthRequest, res: Response): Promise<void>
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const updateMember = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedMember = await prisma.member.update({
+      where: { id: id as string },
+      data: updateData
+    });
+
+    res.status(200).json(updatedMember);
+  } catch (error) {
+    console.error('Update member error:', error);
+    res.status(500).json({ error: 'Failed to update member' });
+  }
+};

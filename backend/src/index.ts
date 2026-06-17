@@ -6,6 +6,12 @@ import authRoutes from './routes/auth.routes';
 import treesRoutes from './routes/trees.routes';
 import membersRoutes from './routes/members.routes';
 import relationshipsRoutes from './routes/relationships.routes';
+import eventsRoutes from './routes/events.routes';
+import documentsRoutes from './routes/documents.routes';
+import notificationsRoutes from './routes/notifications.routes';
+import aiRoutes from './routes/ai.routes';
+import { startCronJobs } from './services/cron.service';
+import path from 'path';
 
 dotenv.config();
 
@@ -17,11 +23,21 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+
 // Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/trees', treesRoutes);
 app.use('/api/v1/members', membersRoutes);
 app.use('/api/v1/relationships', relationshipsRoutes);
+app.use('/api/v1/events', eventsRoutes);
+app.use('/api/v1/documents', documentsRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/ai', aiRoutes);
+
+// Start background jobs
+startCronJobs();
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });

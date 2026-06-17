@@ -30,15 +30,13 @@ export const AuthPage: React.FC = () => {
       }
       
       addToast({
-        title: 'Success',
         message: 'Successfully authenticated',
         type: 'success'
       });
       navigate('/dashboard');
     } catch (error: any) {
       addToast({
-        title: 'Authentication Failed',
-        message: error.response?.data?.error || 'An error occurred during authentication',
+        message: error.response?.data?.error || 'Authentication Failed: An error occurred during authentication',
         type: 'error'
       });
     } finally {
