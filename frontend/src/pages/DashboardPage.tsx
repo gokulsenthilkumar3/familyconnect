@@ -8,14 +8,13 @@ import { Button } from '../components/common/Button';
 import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
-  const { members, relationships, activeTree } = useFamilyStore();
+  const { members, relationships, activeTree, documents } = useFamilyStore();
 
   const stats = [
     {
       title: 'Total Members',
       value: members.length,
       icon: <Users size={24} />,
-      trend: { value: '+2 this month', isPositive: true }
     },
     {
       title: 'Relationships',
@@ -24,13 +23,12 @@ export const DashboardPage: React.FC = () => {
     },
     {
       title: 'Photos & Memories',
-      value: 124, // Mock
+      value: documents.length,
       icon: <ImageIcon size={24} />,
-      trend: { value: '+12 this week', isPositive: true }
     },
     {
       title: 'Upcoming Events',
-      value: 4, // Mock
+      value: members.filter(m => m.birthDate).length, // Number of known birthdays
       icon: <CalendarDays size={24} />,
     }
   ];

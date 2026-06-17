@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
 const prisma = new PrismaClient();
@@ -72,7 +72,8 @@ export const getTreeById = async (req: AuthRequest, res: Response): Promise<void
       },
       include: {
         members: true,
-        relationships: true
+        relationships: true,
+        accessControl: true
       }
     });
 
@@ -81,9 +82,89 @@ export const getTreeById = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    res.status(200).json(tree);
+    // Determine the role of the requesting user
+    const userAccess = tree.accessControl.find(ac => ac.userId === userId);
+    const currentUserRole = userAccess ? userAccess.role : 'viewer';
+
+    res.status(200).json({ ...tree, currentUserRole });
   } catch (error) {
     console.error('Get tree by id error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const inviteUserToTree = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: treeId } = req.params;
+    const { email, role } = req.body;
+
+    // Check if requester is admin
+    const requesterAccess = await prisma.accessControl.findFirst({
+      where: { treeId: treeId as string, userId: userId as string, role: 'admin' }
+    });
+
+    if (!requesterAccess) {
+      res.status(403).json({ error: 'Only admins can invite members' });
+      return;
+    }
+
+    // Find the user being invited
+    const invitedUser = await prisma.user.findUnique({ where: { email } });
+    if (!invitedUser) {
+      res.status(404).json({ error: 'User not found in the system' });
+      return;
+    }
+
+    // Create or update access control
+    const access = await prisma.accessControl.upsert({
+      where: {
+        treeId_userId: { treeId: treeId as string, userId: invitedUser.id }
+      },
+      update: {
+        role: role as Role
+      },
+      create: {
+        treeId: treeId as string,
+        userId: invitedUser.id,
+        role: role as Role
+      }
+    });
+
+    res.status(200).json(access);
+  } catch (error) {
+    console.error('Invite user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getTreeAccessList = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: treeId } = req.params;
+
+    // Basic check to ensure requester has access to the tree
+    const hasAccess = await prisma.accessControl.findFirst({
+      where: { treeId: treeId as string, userId: userId as string }
+    });
+
+    if (!hasAccess) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
+    const accessList = await prisma.accessControl.findMany({
+      where: { treeId: treeId as string },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    });
+
+    res.status(200).json(accessList);
+  } catch (error) {
+    console.error('Get tree access list error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
