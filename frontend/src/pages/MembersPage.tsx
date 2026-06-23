@@ -1,176 +1,122 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { UserPlus, Search, Filter } from 'lucide-react';
 import { useFamilyStore } from '../store/familyStore';
-import { MemberCard } from '../components/profile/MemberCard';
-import { AddMemberModal } from '../components/profile/AddMemberModal';
-import { Button } from '../components/common/Button';
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
-} as const;
-
-const itemVariants = {
-  hidden: { opacity: 0, scale: 0.9, y: 15 },
-  show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } }
-} as const;
+import { MemberCard } from '../components/members/MemberCard';
+import { AddMemberModal } from '../components/members/AddMemberModal';
+import apiClient from '../api/client';
 
 export const MembersPage: React.FC = () => {
-  const { members } = useFamilyStore();
-  const navigate = useNavigate();
+  const { activeTree, setMembers } = useFamilyStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  
-  // Advanced Filters
-  const [statusFilter, setStatusFilter] = useState<'all' | 'living' | 'deceased'>('all');
-  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'other'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterGender, setFilterGender] = useState('');
+  const [filterGeneration, setFilterGeneration] = useState('');
 
-  const filteredMembers = members.filter(m => {
-    // Text search (name, location, occupation)
-    const term = searchTerm.toLowerCase();
-    const matchesSearch = 
-      m.name.toLowerCase().includes(term) ||
-      m.birthLocation?.toLowerCase().includes(term) ||
-      m.occupation?.toLowerCase().includes(term);
+  const { isLoading } = useQuery({
+    queryKey: ['members', activeTree?.id],
+    queryFn: async () => {
+      if (!activeTree) return [];
+      const res = await apiClient.get(`/members?treeId=${activeTree.id}`);
+      setMembers(res.data);
+      return res.data;
+    },
+    enabled: !!activeTree,
+  });
 
-    // Status filter
-    let matchesStatus = true;
-    if (statusFilter === 'living') matchesStatus = m.isAlive === true;
-    if (statusFilter === 'deceased') matchesStatus = m.isAlive === false;
+  const { members } = useFamilyStore();
 
-    // Gender filter
-    let matchesGender = true;
-    if (genderFilter !== 'all') matchesGender = m.gender === genderFilter;
-
-    return matchesSearch && matchesStatus && matchesGender;
+  const filtered = members.filter(m => {
+    const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGender = !filterGender || m.gender === filterGender;
+    return matchesSearch && matchesGender;
   });
 
   return (
-    <div className="max-w-7xl mx-auto h-full flex flex-col">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Directory</h1>
-          <p className="text-gray-500 text-sm mt-1">{members.length} total family members</p>
+          <h1 className="text-2xl font-bold text-gray-900">Family Members</h1>
+          <p className="text-gray-500 text-sm mt-1">{members.length} members in this tree</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <Search size={18} />
-            </div>
-            <input 
-              type="text" 
-              placeholder="Search by name, location..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-saffron)] focus:border-transparent transition-all sm:text-sm"
-            />
-          </div>
-          <Button 
-            variant={showFilters ? "primary" : "secondary"} 
-            size="icon" 
-            title="Filters"
-            onClick={() => setShowFilters(!showFilters)}
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-saffron)] text-white rounded-xl hover:opacity-90 transition-opacity font-medium"
+        >
+          <UserPlus size={18} />
+          <span>Add Member</span>
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl px-3 py-2 flex-1 min-w-[200px]">
+          <Search size={16} className="text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 outline-none text-sm bg-transparent"
+            aria-label="Search members"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl px-3 py-2">
+          <Filter size={16} className="text-gray-400" />
+          <label htmlFor="filter-gender" className="sr-only">Filter by gender</label>
+          <select
+            id="filter-gender"
+            value={filterGender}
+            onChange={(e) => setFilterGender(e.target.value)}
+            className="outline-none text-sm bg-transparent"
           >
-            <Filter size={18} />
-          </Button>
-          <Button 
-            variant="primary" 
-            leftIcon={<Plus size={18} />}
-            onClick={() => setIsAddModalOpen(true)}
+            <option value="">All Genders</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl px-3 py-2">
+          <Filter size={16} className="text-gray-400" />
+          <label htmlFor="filter-generation" className="sr-only">Filter by generation</label>
+          <select
+            id="filter-generation"
+            value={filterGeneration}
+            onChange={(e) => setFilterGeneration(e.target.value)}
+            className="outline-none text-sm bg-transparent"
           >
-            Add Member
-          </Button>
+            <option value="">All Generations</option>
+            <option value="1">1st Generation</option>
+            <option value="2">2nd Generation</option>
+            <option value="3">3rd Generation</option>
+          </select>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      {showFilters && (
-        <div className="mb-6 p-4 bg-white border border-gray-200 rounded-xl flex flex-wrap gap-4 items-center animate-fade-in">
-          <div className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Status</label>
-            <select 
-              className="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-[var(--color-saffron)] focus:border-[var(--color-saffron)]"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="living">Living</option>
-              <option value="deceased">Deceased</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Gender</label>
-            <select 
-              className="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-[var(--color-saffron)] focus:border-[var(--color-saffron)]"
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value as any)}
-            >
-              <option value="all">All Genders</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          
-          <div className="ml-auto mt-auto">
-            <Button 
-              variant="tertiary" 
-              size="sm"
-              onClick={() => {
-                setStatusFilter('all');
-                setGenderFilter('all');
-                setSearchTerm('');
-              }}
-            >
-              Clear Filters
-            </Button>
-          </div>
+      {/* Members Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-gray-400 text-lg">No members found</p>
+          <p className="text-gray-300 text-sm mt-1">Try adjusting your search or filters</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map(member => (
+            <MemberCard key={member.id} member={member} />
+          ))}
         </div>
       )}
 
-      {/* Grid */}
-      <div className="flex-1 overflow-y-auto pb-6">
-        {filteredMembers.length > 0 ? (
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-          >
-            {filteredMembers.map(member => (
-              <motion.div variants={itemVariants} key={member.id}>
-                <MemberCard 
-                  member={member} 
-                  onClick={() => navigate(`/profile/${member.id}`)}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <div className="h-64 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
-              <Search size={32} />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900">No members found</h3>
-            <p className="text-gray-500 mt-1 max-w-sm">
-              We couldn't find anyone matching "{searchTerm}". Try adjusting your search or add a new member.
-            </p>
-          </div>
-        )}
-      </div>
-
-      <AddMemberModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-      />
+      <AddMemberModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
     </div>
   );
 };
