@@ -64,6 +64,7 @@ model Member {
   gender        Gender?
   religion      String?
   bio           String?
+  occupation    String?
   photoUrl      String?
   createdById   String
   createdAt     DateTime  @default(now())
@@ -105,6 +106,7 @@ model Relationship {
   member2 Member     @relation("Member2", fields: [member2Id], references: [id])
 
   @@index([treeId, member1Id])
+  @@index([treeId, member2Id])  // covers reverse-direction relationship lookups
   @@map("relationships")
 }
 
@@ -171,6 +173,7 @@ model Document {
   tree   FamilyTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
   member Member?    @relation(fields: [memberId], references: [id])
 
+  @@index([treeId, memberId])  // member profile document gallery queries
   @@map("documents")
 }
 
@@ -211,6 +214,7 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, isRead])  // fast unread-count queries per user
   @@map("notifications")
 }
 
