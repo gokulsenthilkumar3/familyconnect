@@ -13,7 +13,9 @@ export const createTree = async (req: AuthRequest, res: Response): Promise<void>
 
     const tree = await prisma.familyTree.create({
       data: {
-        name, ownerId: userId, isPublic: isPublic || false,
+        name,
+        ownerId: userId,
+        isPublic: isPublic || false,
         accessControl: { create: { userId, role: 'admin' } },
       },
     });
@@ -33,7 +35,10 @@ export const getTrees = async (req: AuthRequest, res: Response): Promise<void> =
 
     const trees = await prisma.familyTree.findMany({
       where: { accessControl: { some: { userId } } },
-      select: { id: true, name: true, isPublic: true, ownerId: true, rootMemberId: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true, name: true, isPublic: true, ownerId: true,
+        rootMemberId: true, createdAt: true, updatedAt: true,
+      },
     });
     await cacheSet(cacheKey, trees, CACHE_TTL.MEMBERS);
     res.status(200).json(trees);
@@ -46,7 +51,7 @@ export const getTrees = async (req: AuthRequest, res: Response): Promise<void> =
 export const getTreeById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { id } = req.params;
+    const id = req.params.id as string;   // cast: Express params are string at runtime
     const cacheKey = `tree:${id}:user:${userId}`;
     const cached = await cacheGet(cacheKey);
     if (cached) { res.status(200).json(cached); return; }
@@ -55,10 +60,16 @@ export const getTreeById = async (req: AuthRequest, res: Response): Promise<void
       where: { id, accessControl: { some: { userId } } },
       include: {
         members: {
-          select: { id: true, name: true, gender: true, birthDate: true, deathDate: true, photoUrl: true },
+          select: {
+            id: true, name: true, gender: true,
+            birthDate: true, deathDate: true, photoUrl: true,
+          },
         },
         relationships: {
-          select: { id: true, member1Id: true, member2Id: true, type: true, customLabel: true, marriageDate: true },
+          select: {
+            id: true, member1Id: true, member2Id: true,
+            type: true, customLabel: true, marriageDate: true,
+          },
         },
         accessControl: true,
       },
@@ -79,7 +90,7 @@ export const getTreeById = async (req: AuthRequest, res: Response): Promise<void
 export const inviteUserToTree = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { id: treeId } = req.params;
+    const treeId = req.params.id as string;  // cast
     const { email, role } = req.body;
 
     const requesterAccess = await prisma.accessControl.findFirst({
@@ -106,7 +117,8 @@ export const inviteUserToTree = async (req: AuthRequest, res: Response): Promise
 export const getTreeAccessList = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { id: treeId } = req.params;
+    const treeId = req.params.id as string;  // cast
+
     const hasAccess = await prisma.accessControl.findFirst({ where: { treeId, userId } });
     if (!hasAccess) { res.status(403).json({ error: 'Access denied' }); return; }
 
