@@ -27,7 +27,6 @@ export const createMember = async (req: AuthRequest, res: Response): Promise<voi
         createdById:   userId,
       },
     });
-    // Bust cache after every write
     await cacheInvalidate(`tree:${treeId}:user:${userId}`, `members:${treeId}`);
     res.status(201).json(member);
   } catch (error) {
@@ -68,7 +67,7 @@ export const getMembers = async (req: AuthRequest, res: Response): Promise<void>
 export const updateMember = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { id } = req.params;
+    const id = req.params.id as string;  // cast: Express params are always string at runtime
 
     const existing = await prisma.member.findUnique({ where: { id }, select: { treeId: true } });
     if (!existing) { res.status(404).json({ error: 'Member not found' }); return; }
