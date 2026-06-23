@@ -44,6 +44,8 @@
 
 @layer utilities {
   .text-balance {
+    /* text-wrap: balance is Chrome 114+; use overflow-wrap as the safe fallback */
+    overflow-wrap: break-word;
     text-wrap: balance;
   }
 }
